@@ -8,6 +8,27 @@ module.exports = {
         ['./src/components/${name.pascalCase}.vue']: 'component.vue'
       },
       renameFile: true, // Rename file question
+      rewriteFiles: [
+        {
+          file: `./client/src/router/views.ts`,
+          needle: 'needle-add-view-to-router-import',
+          splicable: [
+            '|const ${name.pascalCase} = () => import(\'@/views/${name.pascalCase}.vue\');'
+          ]
+        },
+        {
+          file: `./client/src/router/views.ts`,
+          needle: 'needle-add-view-to-router',
+          splicable: [`
+             |    {
+             |      path: '/${name.kebabCase}',
+             |      name: '${name.pascalCase}',
+             |      component: ${name.pascalCase},
+             |    },
+            `
+          ]
+        }
+      ],
       prompts: [
         // Custom Questions
         {
