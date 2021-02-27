@@ -65,6 +65,7 @@ function rewrite(args) {
   });
 
   let spaces = 0;
+  console.log(lines);
   while (lines[otherwiseLineIndex].charAt(spaces) === ' ') {
     spaces += 1;
   }
@@ -81,20 +82,11 @@ function rewrite(args) {
   return lines.join('\n');
 }
 
-async function rewriteFile(api, target) {
+function rewriteFile(api, target) {
   const {name} = target;
   const resolveProjectFile = api.resolve(target.file);
 
-  const haystack = await new Promise((resolve, reject) =>
-    fs.readFile(target.file, (err, data) => {
-      if (err) {
-        console.log(err);
-        return reject(err);
-      }
-      resolve(data.toString());
-    })
-  );
-  console.log(haystack);
+  const haystack = fs.readFileSync(target.file).toString();
 
   const e = (s) => eval('`' + s + '`');
   const splicable = target.splicable.map(stripMargin).map(e);
@@ -104,13 +96,7 @@ async function rewriteFile(api, target) {
     splicable
   };
   const body = rewrite(args);
-  await new Promise((resolve, reject) => fs.writeFile(target.file, body, (err) => {
-    if (err) {
-      console.log(err);
-      return reject(err)
-    }
-    resolve();
-  }));
+  fs.writeFileSync(target.file, body);
   return args.haystack !== body;
 }
 
@@ -140,9 +126,9 @@ module.exports = (api, options) => {
 
     });
 
-    templateObject.rewriteFiles.forEach(async target => {
+    templateObject.rewriteFiles.forEach(target => {
       target.name = name;
-      return await rewriteFile(api, target);
+      rewriteFile(api, target);
     });
 
     api.render(files, {
