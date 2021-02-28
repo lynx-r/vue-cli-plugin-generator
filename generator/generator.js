@@ -65,7 +65,6 @@ function rewrite(args) {
   });
 
   let spaces = 0;
-  console.log(lines);
   while (lines[otherwiseLineIndex].charAt(spaces) === ' ') {
     spaces += 1;
   }
@@ -82,22 +81,49 @@ function rewrite(args) {
   return lines.join('\n');
 }
 
-function rewriteFile(api, target) {
-  const {name} = target;
-  const resolveProjectFile = api.resolve(target.file);
+async function rewriteFile(api, target) {
 
-  const haystack = fs.readFileSync(target.file).toString();
+  const rw = (resolve, reject) => {
+    const path = /*'/Volumes/Local/IdeaProjects/examples/deno/test.txt' ||*/ target.file;
+    const resolveProjectFile = api.resolve(path);
 
-  const e = (s) => eval('`' + s + '`');
-  const splicable = target.splicable.map(stripMargin).map(e);
-  const args = {
-    ...target,
-    haystack,
-    splicable
+    const rewriteFileCb = (err, data) => {
+      if (!!err) {
+        reject(err);
+        console.log('error while reading a file');
+        return;
+      }
+      const writeFileCb = (err) => {
+        if (err) {
+          reject(err);
+          console.log(err);
+          return;
+        }
+        resolve(target);
+        console.log('file overridden', body);
+      };
+
+      const haystack = data.toString();
+      console.log('read file', haystack);
+      const e = (s, i) => {
+        const name = target.name;
+        const comma = i === 0 ? ',' : '';
+        return eval('`' + s + '`');
+      };
+      const splicable = target.splicable.map(stripMargin).map(e);
+      const args = {
+        ...target,
+        haystack,
+        splicable
+      };
+      const body = rewrite(args);
+      fs.writeFile(path, body, writeFileCb);
+    };
+
+    fs.readFile(target.file, rewriteFileCb);
   };
-  const body = rewrite(args);
-  fs.writeFileSync(target.file, body);
-  return args.haystack !== body;
+
+  return await new Promise(rw);
 }
 
 module.exports = (api, options) => {
@@ -126,13 +152,13 @@ module.exports = (api, options) => {
 
     });
 
-    templateObject.rewriteFiles.forEach(target => {
-      target.name = name;
-      rewriteFile(api, target);
-    });
-
     api.render(files, {
       ...options
+    });
+
+    templateObject.rewriteFiles.forEach(async (target) => {
+      target.name = name;
+      await rewriteFile(api, target);
     });
 
   } else {
