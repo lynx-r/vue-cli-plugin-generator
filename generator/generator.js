@@ -170,9 +170,11 @@ module.exports = async (api, options) => {
       ...options
     });
 
-    for (const target of templateObject.rewriteFiles) {
-      target.name = name;
-      await inserSplicableUnderNeedles(api, target).then(writeFile);
+    if (templateObject.rewriteFiles) {
+      for (const target of templateObject.rewriteFiles) {
+        target.name = name;
+        await inserSplicableUnderNeedles(api, target).then(writeFile);
+      }
     }
 
   } else {
