@@ -1,6 +1,7 @@
 const {camelCase, upperFirst, kebabCase} = require('lodash/string');
 const fs = require('fs');
 const os = require('os');
+const _ = require('lodash');
 
 const getNamings = string => ({
   value: string,
@@ -108,7 +109,7 @@ const writeFile = ({path, body}) => {
 function inserSplicableUnderNeedles(api, target) {
 
   const handler = (resolve, reject) => {
-    const path = target.file;
+    const path = api.resolve(target.basePath, target.file);
 
     const insertSplicables = (err, data) => {
       if (!!err) {
@@ -170,10 +171,15 @@ module.exports = async (api, options) => {
       ...options
     });
 
-    if (templateObject.rewriteFiles) {
-      for (const target of templateObject.rewriteFiles) {
-        target.name = name;
-        await inserSplicableUnderNeedles(api, target).then(writeFile);
+    if (!_.isEmpty(templateObject.rewriteFiles)) {
+      const {rewriteFiles, basePath = ''} = templateObject
+      for (const target of rewriteFiles) {
+        const args = {
+          ...target,
+          name,
+          basePath
+        }
+        await inserSplicableUnderNeedles(api, args).then(writeFile);
       }
     }
 
