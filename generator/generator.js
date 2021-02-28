@@ -81,52 +81,67 @@ function rewrite(args) {
   return lines.join('\n');
 }
 
-async function rewriteFile(api, target) {
-
-  const rw = (resolve, reject) => {
-    const path = /*'/Volumes/Local/IdeaProjects/examples/deno/test.txt' ||*/ target.file;
-    const resolveProjectFile = api.resolve(path);
-
-    const rewriteFileCb = (err, data) => {
-      if (!!err) {
+const writeFile = ({path, body}) => {
+  const w = (resolve, reject) => {
+    const writeFileCb = (err) => {
+      if (err) {
         reject(err);
-        console.log('error while reading a file');
+        console.log(err);
         return;
       }
-      const writeFileCb = (err) => {
-        if (err) {
-          reject(err);
-          console.log(err);
-          return;
-        }
-        resolve(target);
-        console.log('file overridden', body);
-      };
+      resolve();
+      console.log('file overridden', body);
+    };
+
+    fs.writeFile(path, body, writeFileCb);
+  };
+
+  return new Promise(w);
+};
+
+/**
+ * insert splicable in place of needls
+ * @param api
+ * @param target
+ * @returns {Promise<unknown>}
+ */
+function inserSplicableUnderNeedles(api, target) {
+
+  const handler = (resolve, reject) => {
+    const path = target.file;
+
+    const insertSplicables = (err, data) => {
+      if (!!err) {
+        reject(err);
+        console.log('error occured while reading file: ', path);
+        return;
+      }
 
       const haystack = data.toString();
-      console.log('read file', haystack);
-      const e = (s, i) => {
+
+      const evaluate = (s, i) => {
         const name = target.name;
         const comma = i === 0 ? ',' : '';
-        return eval('`' + s + '`');
+        return eval('`' + stripMargin(s) + '`');
       };
-      const splicable = target.splicable.map(stripMargin).map(e);
+      const splicable = target.splicable.map(evaluate);
+
       const args = {
         ...target,
         haystack,
         splicable
       };
       const body = rewrite(args);
-      fs.writeFile(path, body, writeFileCb);
+      resolve({body, path});
     };
 
-    fs.readFile(target.file, rewriteFileCb);
+    fs.readFile(path, insertSplicables);
   };
 
-  return await new Promise(rw);
+  return new Promise(handler);
 }
 
-module.exports = (api, options) => {
+module.exports = async (api, options) => {
   const generatorConfig = require(api.resolve('generator.config.js')) || require(api.resolve('.generator/generator.config.js'));
 
   if (!(generatorConfig && generatorConfig.templates)) {
@@ -149,17 +164,16 @@ module.exports = (api, options) => {
     Object.keys(templateObject.template).forEach(target => {
       const resolveTemplateFile = api.resolve(templateFolderLocation + templateObject.template[target]);
       files[[eval('`' + target + '`')]] = eval('`' + resolveTemplateFile + '`');
-
     });
 
     api.render(files, {
       ...options
     });
 
-    templateObject.rewriteFiles.forEach(async (target) => {
+    for (const target of templateObject.rewriteFiles) {
       target.name = name;
-      await rewriteFile(api, target);
-    });
+      await inserSplicableUnderNeedles(api, target).then(writeFile);
+    }
 
   } else {
     throw 'No Template selected';
