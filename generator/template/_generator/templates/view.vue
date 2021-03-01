@@ -18,3 +18,9 @@ export default defineComponent({
   },
 });
 </script>
+<% if (scoped) { %>
+<style scoped>
+<% } else { %>
+<style>
+<% } %>
+</style>

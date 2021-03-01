@@ -3,23 +3,24 @@ const path = require('path');
 let questions = [];
 
 module.exports = api => {
-  if(api.scripts.make) {
-    const generatorConfig = require(path.resolve(process.cwd()+'/generator.config.js'));
+  if (api.scripts.make) {
+    const generatorConfig = require(path.resolve(process.cwd() + '/generator.config.js'));
 
-    if(generatorConfig) {
-      
-      const types = generatorConfig.templates.map(type => (
-        {
-          name: type.label,
-          value: type.name,
-        }
-      ));
-      
+    if (generatorConfig) {
+      const {templates} = generatorConfig;
+
+      const types = templates
+        .map(type => (
+          {
+            name: type.label,
+            value: type.name,
+          }
+        ));
+
       // Check if file need to be renamed
-      let renameFileQuestion = generatorConfig.templates.filter(type => type && type.renameFile);
-
-      if(renameFileQuestion.length) {
-        renameFileQuestion = renameFileQuestion.map(type => (
+      const renameFileQuestion = templates
+        .filter(type => type?.renameFile)
+        .map(type => (
           {
             type: 'input',
             name: 'name',
@@ -29,15 +30,8 @@ module.exports = api => {
             when: answers => answers.type === `${type.name}`,
           }
         ));
-      }
-      const hasCustomPrompts = generatorConfig.templates.some(type => type.prompts);
-      const allPromptsFromConfig = generatorConfig.templates.map(type => type.prompts)
 
-      let customPrompts = [];
-
-      if (hasCustomPrompts && allPromptsFromConfig && allPromptsFromConfig.length) {
-        customPrompts = [].concat.apply([],allPromptsFromConfig);        
-      }
+      const customPrompts = templates.flatMap(type => type.prompts);
 
       questions = [
         {
@@ -50,11 +44,11 @@ module.exports = api => {
         },
         ...renameFileQuestion,
         ...customPrompts
-      ]
+      ];
     } else {
       throw 'No `generator.config.js` in you root folder.';
     }
   }
-  
+
   return questions;
-}
+};

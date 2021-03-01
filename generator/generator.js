@@ -1,19 +1,18 @@
 const {camelCase, upperFirst, kebabCase} = require('lodash/string');
 const fs = require('fs');
 const os = require('os');
-const _ = require('lodash');
+const path = require('path');
 
-const getNamings = string => ({
+const TEMPLATE_FOLDER_LOCATION = '.generator/templates/';
+
+const getNamings = (string) => ({
   value: string,
   camelCase: camelCase(string),
   pascalCase: upperFirst(camelCase(string)),
   kebabCase: kebabCase(string),
 });
 
-function stripMargin(content) {
-  return content.replace(/^[ ]*\|/gm, '');
-}
-
+const stripMargin = content => content.replace(/^[ ]*\|/gm, '');
 
 /**
  * Escape regular expressions.
@@ -21,9 +20,9 @@ function stripMargin(content) {
  * @param {string} str string
  * @returns {string} string with regular expressions escaped
  */
-function escapeRegExp(str) {
+const escapeRegExp = str => {
   return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&'); // eslint-disable-line
-}
+};
 
 
 /**
@@ -34,10 +33,10 @@ function escapeRegExp(str) {
  * @param {string} str string
  * @returns {string} string where CRLF is replaced with LF in Windows
  */
-function normalizeLineEndings(str) {
+const normalizeLineEndings = str => {
   const isWin32 = os.platform() === 'win32';
   return isWin32 ? str.replace(/\r\n/g, '\n') : str;
-}
+};
 
 /**
  * Rewrite using the passed argument object.
@@ -45,7 +44,7 @@ function normalizeLineEndings(str) {
  * @param {object} args arguments object (containing splicable, haystack, needle properties) to be used
  * @returns {*} re-written file
  */
-function rewrite(args) {
+const rewrite = args => {
   // check if splicable is already in the body text
   const re = new RegExp(args.splicable
     .map(line => `\\s*${escapeRegExp(normalizeLineEndings(line))}`)
@@ -80,18 +79,17 @@ function rewrite(args) {
   lines.splice(otherwiseLineIndex, 0, args.splicable.map(line => spaceStr + line).join('\n'));
 
   return lines.join('\n');
-}
+};
 
 const writeFile = ({path, body}) => {
   const w = (resolve, reject) => {
     const writeFileCb = (err) => {
       if (err) {
         reject(err);
-        console.log(err);
+        console.error('error occurred while writing file: ', path);
         return;
       }
       resolve();
-      console.log('file overridden', body);
     };
 
     fs.writeFile(path, body, writeFileCb);
@@ -106,15 +104,14 @@ const writeFile = ({path, body}) => {
  * @param target
  * @returns {Promise<unknown>}
  */
-function inserSplicableUnderNeedles(api, target) {
-
-  const handler = (resolve, reject) => {
+const insertSplicableUnderNeedles = (api, target) =>
+  new Promise((resolve, reject) => {
     const path = api.resolve(target.basePath, target.file);
 
     const insertSplicables = (err, data) => {
       if (!!err) {
         reject(err);
-        console.log('error occured while reading file: ', path);
+        console.error('error occurred while reading file: ', path);
         return;
       }
 
@@ -137,52 +134,54 @@ function inserSplicableUnderNeedles(api, target) {
     };
 
     fs.readFile(path, insertSplicables);
-  };
+  });
 
-  return new Promise(handler);
-}
+const resolveTemplate = (template, name, basePath, api) =>
+  Object
+    .keys(template)
+    .reduce((acc, cur) => {
+      const evalTemplateFile = eval('`' + template[cur] + '`');
+      const templateFile = api.resolve(TEMPLATE_FOLDER_LOCATION, evalTemplateFile);
+
+      const evalProjectFile = eval('`' + cur + '`');
+      const projectFile = path.join(basePath, evalProjectFile);
+
+      acc[projectFile] = templateFile;
+      return acc;
+    }, {});
+
+const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
+  if (rewriteFiles?.length) {
+    for (const target of rewriteFiles) {
+      const args = {
+        ...target,
+        name,
+        basePath
+      };
+      await insertSplicableUnderNeedles(api, args).then(writeFile);
+    }
+  }
+};
 
 module.exports = async (api, options) => {
   const generatorConfig = require(api.resolve('generator.config.js')) || require(api.resolve('.generator/generator.config.js'));
 
-  if (!(generatorConfig && generatorConfig.templates)) {
+  if (!generatorConfig?.templates?.length) {
     throw 'No Template file found';
   }
 
-  const templateObject = generatorConfig.templates.find(template => template.name === options.type);
-
-  const templateFolderLocation = '.generator/templates/';
+  const {templates, basePath} = generatorConfig;
+  const templateObject = templates.find(template => template.name === options.type);
 
   if (templateObject) {
-    let files = {};
-    let {name} = templateObject;
+    const n = options.name || templateObject.name;
+    const name = getNamings(n);
+    const {template, rewriteFiles} = templateObject;
 
-    if (options.name) {
-      options.name = getNamings(options.name);
-      name = options.name;
-    }
+    const files = resolveTemplate(template, name, basePath, api);
+    api.render(files, {...options, name});
 
-    Object.keys(templateObject.template).forEach(target => {
-      const resolveTemplateFile = api.resolve(templateFolderLocation + templateObject.template[target]);
-      files[[eval('`' + target + '`')]] = eval('`' + resolveTemplateFile + '`');
-    });
-
-    api.render(files, {
-      ...options
-    });
-
-    if (!_.isEmpty(templateObject.rewriteFiles)) {
-      const {rewriteFiles, basePath = ''} = templateObject
-      for (const target of rewriteFiles) {
-        const args = {
-          ...target,
-          name,
-          basePath
-        }
-        await inserSplicableUnderNeedles(api, args).then(writeFile);
-      }
-    }
-
+    await rewriteNeedledFiles(rewriteFiles, name, basePath, api);
   } else {
     throw 'No Template selected';
   }
