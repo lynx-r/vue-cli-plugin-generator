@@ -81,18 +81,18 @@ const rewrite = args => {
   return lines.join('\n');
 };
 
-const writeFile = ({path, body}) => {
+const writeFile = ({filePath, body}) => {
   const w = (resolve, reject) => {
     const writeFileCb = (err) => {
       if (err) {
         reject(err);
-        console.error('error occurred while writing file: ', path);
+        console.error('error occurred while writing file: ', filePath);
         return;
       }
       resolve();
     };
 
-    fs.writeFile(path, body, writeFileCb);
+    fs.writeFile(filePath, body, writeFileCb);
   };
 
   return new Promise(w);
@@ -106,34 +106,39 @@ const writeFile = ({path, body}) => {
  */
 const insertSplicableUnderNeedles = (api, target) =>
   new Promise((resolve, reject) => {
-    const path = api.resolve(target.basePath, target.file);
+    const {basePath, name, splicable: splicableRaw, needle, file: {template, project}} = target;
+    const filePath = path.resolve(basePath, project);
+    const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
 
     const insertSplicables = (err, data) => {
       if (!!err) {
         reject(err);
-        console.error('error occurred while reading file: ', path);
+        console.error('error occurred while reading file: ', filePath);
         return;
       }
 
       const haystack = data.toString();
 
       const evaluate = (s, i) => {
-        const name = target.name;
         const comma = i === 0 ? ',' : '';
         return eval('`' + stripMargin(s) + '`');
       };
-      const splicable = target.splicable.map(evaluate);
+      const splicable = splicableRaw.map(evaluate);
 
       const args = {
-        ...target,
+        needle,
         haystack,
-        splicable
+        splicable,
       };
       const body = rewrite(args);
-      resolve({body, path});
+      resolve({body, filePath});
     };
 
-    fs.readFile(path, insertSplicables);
+    const readFileCb = () => {
+      fs.readFile(filePath, insertSplicables);
+    };
+
+    fs.copyFile(templateFilePath, filePath, fs.constants.COPYFILE_EXCL, readFileCb);
   });
 
 const resolveTemplate = (template, name, basePath, api) =>
@@ -152,7 +157,9 @@ const resolveTemplate = (template, name, basePath, api) =>
 
 const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
   if (rewriteFiles?.length) {
-    for (const target of rewriteFiles) {
+    // put init file props to every part for overriding
+    const f = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})))
+    for (const target of f) {
       const args = {
         ...target,
         name,

@@ -29,21 +29,27 @@ module.exports = {
       },
       rewriteFiles: [
         {
-          file: `./src/router/views.ts`,
-          needle: 'needle-add-view-to-router-import',
-          splicable: [
-            '|const ${name.pascalCase} = () => import(\'@/views/${name.pascalCase}.vue\');'
-          ]
-        },
-        {
-          file: `./src/router/views.ts`,
-          needle: 'needle-add-view-to-router',
-          splicable: [
-            `|    {
+          file: {
+            template: 'router-views.ts',
+            project: './src/router/views.ts'
+          },
+          parts: [
+            {
+              needle: 'needle-add-view-to-router-import',
+              splicable: [
+                '|const ${name.pascalCase} = () => import(\'@/views/${name.pascalCase}.vue\');'
+              ]
+            },
+            {
+              needle: 'needle-add-view-to-router',
+              splicable: [
+                `|    {
              |      path: '/\${name.kebabCase}',
              |      name: '\${name.pascalCase}',
              |      component: \${name.pascalCase},
              |    },`
+              ]
+            }
           ]
         }
       ],
