@@ -1,4 +1,5 @@
 module.exports = {
+  // basePath: './client',
   templates: [
     {
       name: 'composition',
@@ -54,7 +55,17 @@ module.exports = {
         }
       ],
       renameFile: true, // Rename file question
-      prompts: []
+      prompts: [
+        // Custom Questions
+        {
+          type: 'confirm',
+          name: 'scoped',
+          message: 'This component with scoped styling?',
+          default: true,
+          group: 'view',
+          when: answers => answers.type === 'view',
+        },
+      ]
     },
     {
       name: 'module',
@@ -93,4 +104,4 @@ module.exports = {
       ]
     },
   ]
-}
+};
