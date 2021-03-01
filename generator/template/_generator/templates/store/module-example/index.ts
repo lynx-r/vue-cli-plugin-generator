@@ -1,8 +1,8 @@
 import { Module } from 'vuex'
 import { StateInterface } from '../models'
-import actions from 'generator/template/_generator/templates/module-example/actions'
-import getters from 'generator/template/_generator/templates/module-example/getters'
-import mutations from 'generator/template/_generator/templates/module-example/mutations'
+import actions from './actions'
+import getters from './getters'
+import mutations from './mutations'
 import state, { <%= name.pascalCase %>StateInterface } from './state'
 
 const <%= name.camelCase %>: Module<<%= name.pascalCase %>StateInterface, StateInterface> = {
