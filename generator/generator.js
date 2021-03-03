@@ -1,7 +1,8 @@
-const {camelCase, upperFirst, kebabCase} = require('lodash/string');
-const fs = require('fs');
 const os = require('os');
 const path = require('path');
+
+const {copyFile, readFile, writeFile, stat, open} = require('fs/promises');
+const {camelCase, upperFirst, kebabCase} = require('lodash/string');
 
 const TEMPLATE_FOLDER_LOCATION = '.generator/templates/';
 
@@ -44,7 +45,7 @@ const normalizeLineEndings = str => {
  * @param {object} args arguments object (containing splicable, haystack, needle properties) to be used
  * @returns {*} re-written file
  */
-const rewrite = args => {
+const rewrite = (args) => {
   // check if splicable is already in the body text
   const re = new RegExp(args.splicable
     .map(line => `\\s*${escapeRegExp(normalizeLineEndings(line))}`)
@@ -81,66 +82,94 @@ const rewrite = args => {
   return lines.join('\n');
 };
 
-const writeFile = ({filePath, body}) => {
-  const w = (resolve, reject) => {
-    const writeFileCb = (err) => {
-      if (err) {
-        reject(err);
-        console.error('error occurred while writing file: ', filePath);
-        return;
-      }
-      resolve();
-    };
-
-    fs.writeFile(filePath, body, writeFileCb);
-  };
-
-  return new Promise(w);
+/**
+ * Copy file from src to dst only if it does not exist
+ * If dst is in subfolder, tries to create dst with subfolder
+ * @param src
+ * @param dst
+ * @returns {Promise<void>}
+ */
+const onceCopyFile = async (src, dst) => {
+  try {
+    await stat(src);
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      await open(src, 'w+');
+      await copyFile(dst, src);
+    } else if (e.code !== 'EEXIST') {
+      throw e;
+    }
+  }
 };
 
 /**
- * insert splicable in place of needls
+ * Insert splicable in place of needles
  * @param api
  * @param target
  * @returns {Promise<unknown>}
  */
-const insertSplicableUnderNeedles = (api, target) =>
-  new Promise((resolve, reject) => {
-    const {basePath, name, splicable: splicableRaw, needle, file: {template, project}} = target;
-    const filePath = path.resolve(basePath, project);
-    const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
+const insertSplicableUnderNeedles = async (api, target) => {
+  const {basePath, splicable: splicableRaw, needle, file: {template, project}} = target;
+  const filePath = path.resolve(basePath, project);
+  const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
 
-    const insertSplicables = (err, data) => {
-      if (!!err) {
-        reject(err);
-        console.error('error occurred while reading file: ', filePath);
-        return;
-      }
+  await onceCopyFile(filePath, templateFilePath);
 
-      const haystack = data.toString();
+  const haystack = await readFile(filePath, {encoding: 'utf8'});
 
-      const evaluate = (s, i) => {
-        const comma = i === 0 ? ',' : '';
-        return eval('`' + stripMargin(s) + '`');
-      };
-      const splicable = splicableRaw.map(evaluate);
+  const evaluate = (s, i) => {
+    // `name` and `comma` are used in eval to evaluate `splicable`
+    /* eslint-disable no-unused-vars */
+    const name = target.name;
+    const comma = i === 0 ? ',' : '';
+    /* eslint-enable no-unused-vars */
+    return eval('`' + stripMargin(s) + '`');
+  };
+  const splicable = splicableRaw.map(evaluate);
 
+  const args = {
+    needle,
+    haystack,
+    splicable,
+  };
+  const body = rewrite(args);
+
+  await writeFile(filePath, body);
+};
+
+/**
+ * Rewrites files from the prop `rewriteFiles` of a template
+ * to insert in place of needles parts of code from `splicable`
+ * @param rewriteFiles
+ * @param name
+ * @param basePath
+ * @param api
+ * @returns {Promise<void>}
+ */
+const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
+  if (rewriteFiles?.length) {
+    // put init file props to every part for overriding
+    const f = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})));
+    for (const target of f) {
       const args = {
-        needle,
-        haystack,
-        splicable,
+        ...target,
+        name,
+        basePath
       };
-      const body = rewrite(args);
-      resolve({body, filePath});
-    };
+      await insertSplicableUnderNeedles(api, args);
+    }
+  }
+};
 
-    const readFileCb = () => {
-      fs.readFile(filePath, insertSplicables);
-    };
-
-    fs.copyFile(templateFilePath, filePath, fs.constants.COPYFILE_EXCL, readFileCb);
-  });
-
+/**
+ * Resolves names of templates witch contains ${name} and ${basePath}.
+ * `name` and `basePath` are used in `eval` to evaluate a template name
+ * @param template
+ * @param name
+ * @param basePath
+ * @param api
+ * @returns {{}}
+ */
 const resolveTemplate = (template, name, basePath, api) =>
   Object
     .keys(template)
@@ -154,21 +183,6 @@ const resolveTemplate = (template, name, basePath, api) =>
       acc[projectFile] = templateFile;
       return acc;
     }, {});
-
-const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
-  if (rewriteFiles?.length) {
-    // put init file props to every part for overriding
-    const f = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})))
-    for (const target of f) {
-      const args = {
-        ...target,
-        name,
-        basePath
-      };
-      await insertSplicableUnderNeedles(api, args).then(writeFile);
-    }
-  }
-};
 
 module.exports = async (api, options) => {
   const generatorConfig = require(api.resolve('generator.config.js')) || require(api.resolve('.generator/generator.config.js'));
