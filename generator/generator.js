@@ -140,12 +140,7 @@ const insertSplicableUnderNeedles = async (api, target) => {
   const {haystackPath, haystack} = await readHaystack(basePath, file);
   const splicable = evaluateSplicable(name, target.splicable);
 
-  const args = {
-    needle,
-    haystack,
-    splicable,
-  };
-  const body = rewrite(args);
+  const body = rewrite({needle, haystack, splicable});
 
   await writeFile(haystackPath, body);
 };
@@ -161,15 +156,10 @@ const insertSplicableUnderNeedles = async (api, target) => {
  */
 const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
   if (rewriteFiles?.length) {
-    // put init file props to every part for overriding
-    const f = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})));
-    for (const target of f) {
-      const args = {
-        ...target,
-        name,
-        basePath
-      };
-      await insertSplicableUnderNeedles(api, args);
+    // put `file` prop to every part for overwriting
+    const extendedRewriteProps = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})));
+    for (const target of extendedRewriteProps) {
+      await insertSplicableUnderNeedles(api, {...target, name, basePath});
     }
   }
 };
