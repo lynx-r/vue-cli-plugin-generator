@@ -103,29 +103,42 @@ const copyFileOnce = async (src, dst) => {
 };
 
 /**
+ * Evaluates the `splicable` props of a template
+ * `name` is used in eval
+ * @param name
+ * @param splicable
+ * @returns {*}
+ */
+const evaluateSplicable = (name, splicable) => {
+  const evaluate = (s, i) => {
+    // `comma` is used in eval to evaluate `splicable`
+    // eslint-disable-next-line no-unused-vars
+    const comma = i === 0 ? ',' : '';
+    return eval('`' + stripMargin(s) + '`');
+  };
+  return splicable.map(evaluate);
+};
+
+async function readHaystack(basePath, {project, template}) {
+  const haystackPath = path.resolve(basePath, project);
+  const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
+
+  await copyFileOnce(haystackPath, templateFilePath);
+  const haystack = await readFile(haystackPath, {encoding: 'utf8'});
+  return {haystack, haystackPath};
+}
+
+/**
  * Insert splicable in place of needles
  * @param api
  * @param target
  * @returns {Promise<unknown>}
  */
 const insertSplicableUnderNeedles = async (api, target) => {
-  const {basePath, splicable: splicableRaw, needle, file: {template, project}} = target;
-  const filePath = path.resolve(basePath, project);
-  const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
+  const {name, basePath, needle, file} = target;
 
-  await copyFileOnce(filePath, templateFilePath);
-
-  const haystack = await readFile(filePath, {encoding: 'utf8'});
-
-  const evaluate = (s, i) => {
-    // `name` and `comma` are used in eval to evaluate `splicable`
-    /* eslint-disable no-unused-vars */
-    const name = target.name;
-    const comma = i === 0 ? ',' : '';
-    /* eslint-enable no-unused-vars */
-    return eval('`' + stripMargin(s) + '`');
-  };
-  const splicable = splicableRaw.map(evaluate);
+  const {haystackPath, haystack} = await readHaystack(basePath, file);
+  const splicable = evaluateSplicable(name, target.splicable);
 
   const args = {
     needle,
@@ -134,7 +147,7 @@ const insertSplicableUnderNeedles = async (api, target) => {
   };
   const body = rewrite(args);
 
-  await writeFile(filePath, body);
+  await writeFile(haystackPath, body);
 };
 
 /**
