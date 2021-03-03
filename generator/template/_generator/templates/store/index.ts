@@ -1,16 +1,19 @@
 import { createStore } from 'vuex'
-import article from './article'
-import { ArticleStateInterface } from './article/state'
-import auth from './auth'
-import { AuthStateInterface } from './auth/state'
-import home from './home'
-import { HomeStateInterface } from './home/state'
-import { Commit, Dispatch, QualifiedKeyType, QualifierFor, StateWithModuleName, Store } from './models'
-import profile from './profile'
-import { ProfileStateInterface } from './profile/state'
+
+// needle-add-module-to-store-import
+
+import {
+  Commit,
+  Dispatch,
+  DispatchReturnType,
+  QualifiedKeyType,
+  QualifierFor,
+  StateWithModuleName,
+  Store
+} from './models'
 
 const modules = {
-
+// needle-add-module-to-modules-object
 }
 
 const store = createStore({
@@ -24,7 +27,7 @@ const origDispatch = store.dispatch
 
 const newDispatch: Dispatch = (key, payload, options) => {
   const type = qualifyKey('mutation', key)
-  return origDispatch(type, payload, options)
+  return origDispatch(type, payload, options) as DispatchReturnType<typeof key>
 }
 
 store.dispatch = newDispatch
@@ -64,10 +67,8 @@ export interface StateInterface {
   // Define your own store structure, using submodules if needed
   // example: ExampleStateInterface;
   // Declared as unknown to avoid linting issue. Best to strongly type as per the line above.
-  home: HomeStateInterface,
-  auth: AuthStateInterface,
-  profile: ProfileStateInterface,
-  article: ArticleStateInterface
+
+  // needle-add-module-state-interface-to-root-state-interface
 }
 
 export function useStore(): Store {

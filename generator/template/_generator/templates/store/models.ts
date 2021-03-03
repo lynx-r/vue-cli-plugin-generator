@@ -1,26 +1,27 @@
 import { CommitOptions, DispatchOptions, Store as VuexStore } from 'vuex'
-import { ArticleStateInterface } from '~/store/article/state'
-import { AuthStateInterface } from '~/store/auth/state'
-import { HomeStateInterface } from '~/store/home/state'
-import { ProfileStateInterface } from '~/store/profile/state'
-import { ArticleActions } from './article/actions'
-import { ArticleGetters } from './article/getters'
-import { ArticleMutations } from './article/mutations'
-import { AuthActions } from './auth/actions'
-import { AuthGetters } from './auth/getters'
-import { AuthMutations } from './auth/mutations'
-import { HomeActions } from './home/actions'
-import { HomeGetters } from './home/getters'
-import { HomeMutations } from './home/mutations'
-import { ProfileActions } from './profile/actions'
-import { ProfileGetters } from './profile/getters'
-import { ProfileMutations } from './profile/mutations'
 
-type Mutations = AuthMutations & HomeMutations & ProfileMutations & ArticleMutations
+// needle-add-module-imports-to-models
 
-type Actions = HomeActions & AuthActions & ProfileActions & ArticleActions
+type Mutations =
+// needle-add-mutation-to-type-mutations
+//   AuthMutations
+//   & HomeMutations
+//   & ProfileMutations
+//   & ArticleMutations
 
-type Getters = HomeGetters & AuthGetters & ProfileGetters & ArticleGetters
+type Actions =
+  // needle-add-action-to-type-actions
+  // HomeActions
+  // & AuthActions
+  // & ProfileActions
+  // & ArticleActions
+
+type Getters =
+  // needle-add-getter-to-type-getters
+  // HomeGetters
+  // & AuthGetters
+  // & ProfileGetters
+  // & ArticleGetters
 
 // exported
 
@@ -28,10 +29,12 @@ export interface StateInterface {
   // Define your own store structure, using submodules if needed
   // example: ExampleStateInterface;
   // Declared as unknown to avoid linting issue. Best to strongly type as per the line above.
-  home: HomeStateInterface,
-  auth: AuthStateInterface,
-  profile: ProfileStateInterface,
-  article: ArticleStateInterface
+
+  // needle-add-module-state-interface-to-root-state-interface
+  // home: HomeStateInterface,
+  // auth: AuthStateInterface,
+  // profile: ProfileStateInterface,
+  // article: ArticleStateInterface
 }
 
 export type Commit = {
@@ -41,6 +44,8 @@ export type Commit = {
     options?: CommitOptions
   ): void
 }
+
+export type DispatchReturnType<K extends keyof Actions> = ReturnType<Actions[K]>
 
 export type Dispatch = {
   <K extends keyof Actions>(
