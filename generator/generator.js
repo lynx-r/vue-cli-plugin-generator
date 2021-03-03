@@ -89,7 +89,7 @@ const rewrite = (args) => {
  * @param dst
  * @returns {Promise<void>}
  */
-const onceCopyFile = async (src, dst) => {
+const copyFileOnce = async (src, dst) => {
   try {
     await stat(src);
   } catch (e) {
@@ -113,7 +113,7 @@ const insertSplicableUnderNeedles = async (api, target) => {
   const filePath = path.resolve(basePath, project);
   const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
 
-  await onceCopyFile(filePath, templateFilePath);
+  await copyFileOnce(filePath, templateFilePath);
 
   const haystack = await readFile(filePath, {encoding: 'utf8'});
 
