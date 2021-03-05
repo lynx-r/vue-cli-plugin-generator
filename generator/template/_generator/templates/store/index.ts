@@ -21,30 +21,30 @@ const store = createStore({
 })
 
 /**
- * override origin store.dispatch to add '[moduleName]/'
+ * wraps origin store.dispatch to add '[moduleName]/'
  */
-const origDispatch = store.dispatch
+const dispatchWrapped = store.dispatch
 
-const newDispatch: Dispatch = (key, payload, options) => {
+const dispatchWrapper: Dispatch = (key, payload, options) => {
   const type = qualifyKey('mutation', key)
-  return origDispatch(type, payload, options) as DispatchReturnType<typeof key>
+  return dispatchWrapped(type, payload, options) as DispatchReturnType<typeof key>
 }
 
-store.dispatch = newDispatch
+store.dispatch = dispatchWrapper
 
 // end newDispatch
 
 /**
- * override origin store.dispatch to add '[moduleName]/'
+ * wraps origin store.dispatch to add '[moduleName]/'
  */
-const origCommit = store.commit
+const commitWrapped = store.commit
 
-const newCommit: Commit = (key, payload, options) => {
+const commitWrapper: Commit = (key, payload, options) => {
   const type = qualifyKey('action', key)
-  origCommit(type, payload, options)
+  commitWrapped(type, payload, options)
 }
 
-store.commit = newCommit
+store.commit = commitWrapper
 
 // end newCommit
 
