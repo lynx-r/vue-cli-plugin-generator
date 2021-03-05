@@ -1,5 +1,4 @@
 module.exports = {
-  // basePath: './client',
   templates: [
     {
       name: 'composition',
