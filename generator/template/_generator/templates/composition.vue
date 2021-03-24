@@ -5,16 +5,16 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: '<%= name.pascalCase %>',
+  name: '<%%= name.pascalCase %%>',
   props: [],
   setup() {
     return {}
   }
 })
 </script>
-<% if (scoped) { %>
+<%% if (scoped) { %%>
 <style scoped>
-<% } else { %>
+<%% } else { %%>
 <style>
-<% } %>
+<%% } %%>
 </style>

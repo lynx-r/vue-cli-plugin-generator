@@ -1,3 +1,3 @@
-export enum <%= name.pascalCase %>MutationTypes {
+export enum <%%= name.pascalCase %%>MutationTypes {
   SOME_MUTATION = 'SOME_MUTATION',
 }

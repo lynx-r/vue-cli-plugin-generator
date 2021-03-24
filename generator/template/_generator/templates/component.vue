@@ -6,7 +6,7 @@
 
 <script lang="ts">
 export default {
-  name: '<%= name.pascalCase %>',
+  name: '<%%= name.pascalCase %%>',
   data() {
     return {
       message: 'Hello World!'
@@ -15,11 +15,11 @@ export default {
 }
 </script>
 
-<% if (scoped) { %>
+<%% if (scoped) { %%>
 <style scoped>
-<% } else { %>
+<%% } else { %%>
 <style>
-<% } %>
+<%% } %%>
 h3 {
   margin: 40px 0 0;
 }

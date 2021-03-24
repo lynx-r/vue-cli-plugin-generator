@@ -8,7 +8,7 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: '<%= name.pascalCase %>',
+  name: '<%%= name.pascalCase %%>',
   components: {
 
   },
@@ -18,9 +18,9 @@ export default defineComponent({
   },
 });
 </script>
-<% if (scoped) { %>
+<%% if (scoped) { %%>
 <style scoped>
-<% } else { %>
+<%% } else { %%>
 <style>
-<% } %>
+<%% } %%>
 </style>
