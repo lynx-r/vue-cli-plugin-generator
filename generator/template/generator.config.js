@@ -1,11 +1,12 @@
 module.exports = {
+  basePath: './src',
   templates: [
     {
       name: 'composition',
       label: 'Composition',
       template: {
         // eslint-disable-next-line no-template-curly-in-string
-        './src/components/${name.pascalCase}.vue': 'composition.vue'
+        './components/${name.pascalCase}.vue': 'composition.vue'
       },
       renameFile: true, // Rename file question
       prompts: [
@@ -25,13 +26,13 @@ module.exports = {
       label: 'View',
       template: {
         // eslint-disable-next-line no-template-curly-in-string
-        './src/views/${name.pascalCase}.vue': 'view.vue'
+        './views/${name.pascalCase}.vue': 'view.vue'
       },
       rewriteFiles: [
         {
           file: {
             template: 'router-views.ts',
-            project: './src/router/views.ts'
+            project: './router/views.ts'
           },
           parts: [
             {
@@ -71,19 +72,19 @@ module.exports = {
       label: 'Module',
       template: {
         // eslint-disable-next-line no-template-curly-in-string
-        './src/store/${name.kebabCase}/actions.ts': 'store/module-example/actions.ts',
-        './src/store/${name.kebabCase}/${name.kebabCase}-action-types.ts': 'store/module-example/example-action-types.ts',
-        './src/store/${name.kebabCase}/${name.kebabCase}-mutation-types.ts': 'store/module-example/example-mutation-types.ts',
-        './src/store/${name.kebabCase}/getters.ts': 'store/module-example/getters.ts',
-        './src/store/${name.kebabCase}/index.ts': 'store/module-example/index.ts',
-        './src/store/${name.kebabCase}/mutations.ts': 'store/module-example/mutations.ts',
-        './src/store/${name.kebabCase}/state.ts': 'store/module-example/state.ts'
+        './store/${name.kebabCase}/actions.ts': 'store/module-example/actions.ts',
+        './store/${name.kebabCase}/${name.kebabCase}-action-types.ts': 'store/module-example/example-action-types.ts',
+        './store/${name.kebabCase}/${name.kebabCase}-mutation-types.ts': 'store/module-example/example-mutation-types.ts',
+        './store/${name.kebabCase}/getters.ts': 'store/module-example/getters.ts',
+        './store/${name.kebabCase}/index.ts': 'store/module-example/index.ts',
+        './store/${name.kebabCase}/mutations.ts': 'store/module-example/mutations.ts',
+        './store/${name.kebabCase}/state.ts': 'store/module-example/state.ts'
       },
       rewriteFiles: [
         {
           file: {
             template: 'store/index.ts',
-            project: './src/store/index.ts'
+            project: './store/index.ts'
           },
           parts: [
             {
@@ -110,7 +111,7 @@ module.exports = {
         {
           file: {
             template: 'store/models.ts',
-            project: './src/store/models.ts'
+            project: './store/models.ts'
           },
           parts: [
             {
@@ -158,7 +159,7 @@ module.exports = {
       label: 'Component',
       template: {
         // eslint-disable-next-line no-template-curly-in-string
-        ['./src/components/${name.pascalCase}.vue']: 'component.vue'
+        ['./components/${name.pascalCase}.vue']: 'component.vue'
       },
       renameFile: true, // Rename file question
       prompts: [

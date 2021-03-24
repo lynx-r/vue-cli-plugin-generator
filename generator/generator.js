@@ -119,8 +119,8 @@ const evaluateSplicable = (name, splicable) => {
   return splicable.map(evaluate);
 };
 
-async function readHaystack({project, template}) {
-  const haystackPath = path.resolve(project);
+async function readHaystack(basePath, {project, template}) {
+  const haystackPath = path.resolve(basePath, project);
   const templateFilePath = path.resolve(TEMPLATE_FOLDER_LOCATION, template);
 
   await copyFileOnce(haystackPath, templateFilePath);
@@ -135,9 +135,9 @@ async function readHaystack({project, template}) {
  * @returns {Promise<unknown>}
  */
 const insertSplicableUnderNeedles = async (api, target) => {
-  const {name, needle, file} = target;
+  const {name, basePath, needle, file} = target;
 
-  const {haystackPath, haystack} = await readHaystack(file);
+  const {haystackPath, haystack} = await readHaystack(basePath, file);
   const splicable = evaluateSplicable(name, target.splicable);
 
   const body = rewrite({needle, haystack, splicable});
@@ -150,28 +150,30 @@ const insertSplicableUnderNeedles = async (api, target) => {
  * to insert in place of needles parts of code from `splicable`
  * @param rewriteFiles
  * @param name
+ * @param basePath
  * @param api
  * @returns {Promise<void>}
  */
-const rewriteNeedledFiles = async (rewriteFiles, name, api) => {
+const rewriteNeedledFiles = async (rewriteFiles, name, basePath, api) => {
   if (rewriteFiles?.length) {
     // put `file` prop to every part for overwriting
     const extendedRewriteProps = rewriteFiles.flatMap(f => f.parts.map(p => ({...p, file: f.file})));
     for (const target of extendedRewriteProps) {
-      await insertSplicableUnderNeedles(api, {...target, name});
+      await insertSplicableUnderNeedles(api, {...target, name, basePath});
     }
   }
 };
 
 /**
- * Resolves names of templates witch contains ${name}
- * `name`is used in `eval` to evaluate a template name
+ * Resolves names of templates witch contains ${name} and ${basePath}.
+ * `name` and `basePath` are used in `eval` to evaluate a template name
  * @param template
  * @param name
+ * @param basePath
  * @param api
  * @returns {{}}
  */
-const resolveTemplate = (template, name, api) =>
+const resolveTemplate = (template, name, basePath, api) =>
   Object
     .keys(template)
     .reduce((acc, cur) => {
@@ -179,7 +181,7 @@ const resolveTemplate = (template, name, api) =>
       const templateFile = api.resolve(TEMPLATE_FOLDER_LOCATION, evalTemplateFile);
 
       const evalProjectFile = eval('`' + cur + '`');
-      const projectFile = path.join(evalProjectFile);
+      const projectFile = path.join(basePath, evalProjectFile);
 
       acc[projectFile] = templateFile;
       return acc;
@@ -192,17 +194,18 @@ module.exports = async (api, options) => {
     throw 'No Template file found';
   }
 
-  const templateObject = generatorConfig.templates.find(template => template.name === options.type);
+  const {templates, basePath = './'} = generatorConfig;
+  const templateObject = templates.find(template => template.name === options.type);
 
   if (templateObject) {
     const n = options.name || templateObject.name;
     const name = getNamings(n);
     const {template, rewriteFiles} = templateObject;
 
-    const files = resolveTemplate(template, name, api);
+    const files = resolveTemplate(template, name, basePath, api);
     api.render(files, {...options, name});
 
-    await rewriteNeedledFiles(rewriteFiles, name, api);
+    await rewriteNeedledFiles(rewriteFiles, name, basePath, api);
   } else {
     throw 'No Template selected';
   }
